@@ -33,13 +33,23 @@ class DateRotatingFileSinkImpl {
   }
 
   private init(): void {
+    // Start the first flush timer if needed
+    this.scheduleNextFlush();
+  }
 
-    if (this.options.flushInterval > 0) {
-      this.flushTimer = setInterval(() => {
-        if (this.buffer.length > 0) {
-          this.flush().catch(() => {
-            // Ignore flush errors in background timer
-          });
+  private scheduleNextFlush(): void {
+    if (this.options.flushInterval > 0 && !this.disposed) {
+      this.flushTimer = setTimeout(() => {
+        this.flushTimer = null; // Clear timer reference
+        if (!this.disposed) {
+          if (this.buffer.length > 0) {
+            this.flush().catch(() => {
+              // Ignore flush errors in background timer
+            });
+            // Only reschedule if there was something to flush
+            this.scheduleNextFlush();
+          }
+          // If buffer is empty, don't reschedule - let process exit naturally
         }
       }, this.options.flushInterval);
     }
@@ -71,6 +81,11 @@ class DateRotatingFileSinkImpl {
 
     const formattedRecord = this.options.formatter(record);
     this.buffer += formattedRecord;
+
+    // Restart timer if it's not running and we have flush interval
+    if (this.flushTimer === null && this.options.flushInterval > 0) {
+      this.scheduleNextFlush();
+    }
 
     if (this.buffer.length >= this.options.bufferSize) {
       this.flush().catch(() => {
@@ -107,7 +122,7 @@ class DateRotatingFileSinkImpl {
     this.disposed = true;
 
     if (this.flushTimer !== null) {
-      clearInterval(this.flushTimer);
+      clearTimeout(this.flushTimer);
       this.flushTimer = null;
     }
 
