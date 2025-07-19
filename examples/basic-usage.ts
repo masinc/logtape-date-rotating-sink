@@ -11,7 +11,6 @@ await configure({
   loggers: [
     {
       category: ["myapp"],
-      level: "debug",
       sinks: ["file"],
     },
   ],

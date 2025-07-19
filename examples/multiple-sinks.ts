@@ -1,3 +1,4 @@
+import type { LogRecord } from "@logtape/logtape";
 import { configure, getLogger, getConsoleSink } from "@logtape/logtape";
 import { getDateRotatingFileSink } from "@logtape/date-rotating-file";
 
@@ -9,7 +10,7 @@ await configure({
     
     // Daily application logs
     app: getDateRotatingFileSink("logs/app-<year>-<month>-<day>.log", {
-      formatter: (record) => {
+      formatter: (record: LogRecord) => {
         const timestamp = new Date(record.timestamp).toISOString();
         const message = Array.isArray(record.message) ? record.message.join(" ") : record.message;
         return `${timestamp} [${record.level.toUpperCase()}] ${record.category.join(".")} - ${message}\n`;
@@ -18,7 +19,7 @@ await configure({
     
     // Minute-based logs for high-frequency monitoring
     monitoring: getDateRotatingFileSink("logs/monitor-<year><month><day>-<hour><minute>.log", {
-      formatter: (record) => {
+      formatter: (record: LogRecord) => {
         const timestamp = new Date(record.timestamp).toISOString();
         const message = Array.isArray(record.message) ? record.message.join(" ") : record.message;
         return `${timestamp},${record.level},${message},${JSON.stringify(record.properties)}\n`;
@@ -29,7 +30,7 @@ await configure({
     
     // Security events with daily rotation
     security: getDateRotatingFileSink("logs/security/<year>/<month>/security-<day>.log", {
-      formatter: (record) => {
+      formatter: (record: LogRecord) => {
         const timestamp = new Date(record.timestamp).toISOString();
         const message = Array.isArray(record.message) ? record.message.join(" ") : record.message;
         return `[SECURITY] ${timestamp} | ${message} | Context: ${JSON.stringify(record.properties)}\n`;
@@ -38,7 +39,7 @@ await configure({
     
     // Performance metrics with hourly rotation
     performance: getDateRotatingFileSink("logs/perf/perf-<year>-<month>-<day>-<hour>h.log", {
-      formatter: (record) => {
+      formatter: (record: LogRecord) => {
         const message = Array.isArray(record.message) ? record.message.join(" ") : record.message;
         return `${record.timestamp},${message},${record.properties.duration || 0},${record.properties.memory || 0}\n`;
       },
@@ -48,22 +49,18 @@ await configure({
   loggers: [
     {
       category: ["app"],
-      level: "info",
       sinks: ["console", "app"],
     },
     {
       category: ["monitor"],
-      level: "debug",
       sinks: ["monitoring"],
     },
     {
       category: ["security"],
-      level: "warn",
       sinks: ["console", "security"],
     },
     {
       category: ["performance"],
-      level: "info", 
       sinks: ["performance"],
     },
   ],

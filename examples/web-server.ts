@@ -1,3 +1,4 @@
+import type { LogRecord } from "@logtape/logtape";
 import { configure, getLogger } from "@logtape/logtape";
 import { getDateRotatingFileSink } from "@logtape/date-rotating-file";
 
@@ -6,7 +7,7 @@ await configure({
   sinks: {
     // Hourly rotation for high-volume web server logs
     access: getDateRotatingFileSink("logs/access-<year>-<month>-<day>-<hour>.log", {
-      formatter: (record) => {
+      formatter: (record: LogRecord) => {
         const timestamp = new Date(record.timestamp).toISOString();
         const message = Array.isArray(record.message) ? record.message.join(' ') : record.message;
         const props = JSON.stringify(record.properties);
@@ -18,7 +19,7 @@ await configure({
     
     // Daily rotation for application errors
     error: getDateRotatingFileSink("logs/error-<year>-<month>-<day>.log", {
-      formatter: (record) => {
+      formatter: (record: LogRecord) => {
         const timestamp = new Date(record.timestamp).toISOString();
         const message = Array.isArray(record.message) ? record.message.join(' ') : record.message;
         return `${timestamp} [ERROR] ${message}\n  Properties: ${JSON.stringify(record.properties, null, 2)}\n\n`;
@@ -29,12 +30,10 @@ await configure({
   loggers: [
     {
       category: ["webserver", "access"],
-      level: "info",
       sinks: ["access"],
     },
     {
       category: ["webserver", "error"],
-      level: "error", 
       sinks: ["error"],
     },
   ],

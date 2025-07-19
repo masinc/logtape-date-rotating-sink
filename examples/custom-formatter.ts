@@ -1,8 +1,9 @@
+import type { LogRecord } from "@logtape/logtape";
 import { configure, getLogger } from "@logtape/logtape";
 import { getDateRotatingFileSink } from "@logtape/date-rotating-file";
 
 // Custom formatter that outputs JSON logs
-const jsonFormatter = (record: any) => {
+const jsonFormatter = (record: LogRecord) => {
   const logEntry = {
     timestamp: new Date(record.timestamp).toISOString(),
     level: record.level.toUpperCase(),
@@ -14,7 +15,7 @@ const jsonFormatter = (record: any) => {
 };
 
 // Custom formatter for development (colorized and readable)
-const devFormatter = (record: any) => {
+const devFormatter = (record: LogRecord) => {
   const timestamp = new Date(record.timestamp).toLocaleString();
   const level = record.level.toUpperCase().padEnd(5);
   const category = record.category.join(".").padEnd(15);
@@ -48,7 +49,7 @@ await configure({
     
     // Audit: Weekly rotation with detailed formatting
     audit: getDateRotatingFileSink("logs/audit-<year>-W<week>.log", {
-      formatter: (record) => {
+      formatter: (record: LogRecord) => {
         const timestamp = new Date(record.timestamp).toISOString();
         const message = Array.isArray(record.message) ? record.message.join(" ") : record.message;
         return `[AUDIT] ${timestamp} | ${record.category.join(".")} | ${message} | ${JSON.stringify(record.properties)}\n`;
@@ -59,12 +60,10 @@ await configure({
   loggers: [
     {
       category: ["app"],
-      level: "debug",
       sinks: ["production", "development"],
     },
     {
       category: ["audit"],
-      level: "info",
       sinks: ["audit"],
     },
   ],
