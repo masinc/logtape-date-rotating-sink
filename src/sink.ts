@@ -121,6 +121,39 @@ class DateRotatingFileSinkImpl {
   }
 }
 
+/**
+ * Creates a date rotating file sink for LogTape.
+ * 
+ * The sink automatically rotates log files when the resolved file path changes
+ * based on the current date/time and the provided path template.
+ * 
+ * @param pathTemplate - File path template with date placeholders like `<year>`, `<month>`, `<day>`, etc.
+ * @param options - Optional configuration for the sink
+ * @returns A LogTape sink function with Symbol.dispose for resource cleanup
+ * 
+ * @example
+ * ```typescript
+ * // Daily rotation
+ * const dailySink = getDateRotatingFileSink("logs/app-<year>-<month>-<day>.log");
+ * 
+ * // Hourly rotation with custom buffer
+ * const hourlySink = getDateRotatingFileSink("logs/app-<year>-<month>-<day>-<hour>.log", {
+ *   bufferSize: 4096,
+ *   flushInterval: 1000
+ * });
+ * 
+ * // Weekly rotation with nested directories
+ * const weeklySink = getDateRotatingFileSink("logs/<year>/week-<week>.log");
+ * 
+ * // Use with LogTape
+ * await configure({
+ *   sinks: {
+ *     file: dailySink
+ *   },
+ *   loggers: [{ category: ["app"], sinks: ["file"] }]
+ * });
+ * ```
+ */
 export function getDateRotatingFileSink(
   pathTemplate: string,
   options?: DateRotatingFileSinkOptions,

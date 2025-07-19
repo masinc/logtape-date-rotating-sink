@@ -1,3 +1,16 @@
+/**
+ * Formats a date into component strings for use in file path templates.
+ * 
+ * @param date - The date to format
+ * @param timezone - Optional timezone (e.g., "Asia/Tokyo", "UTC")
+ * @returns Object containing formatted date components with zero-padding
+ * 
+ * @example
+ * ```typescript
+ * const components = formatDate(new Date('2025-01-19T14:30:45Z'));
+ * // Returns: { year: '2025', month: '01', day: '19', hour: '14', minute: '30', second: '45', week: '03' }
+ * ```
+ */
 export function formatDate(
   date: Date,
   timezone?: string,
@@ -31,6 +44,23 @@ export function formatDate(
   };
 }
 
+/**
+ * Resolves a file path template by replacing date placeholders with actual values.
+ * 
+ * @param pathTemplate - Template string with placeholders like `<year>`, `<month>`, etc.
+ * @param date - The date to use for placeholder replacement
+ * @param timezone - Optional timezone for date formatting
+ * @returns Resolved file path with placeholders replaced
+ * 
+ * @example
+ * ```typescript
+ * const path = resolvePath("logs/app-<year>-<month>-<day>.log", new Date('2025-01-19'));
+ * // Returns: "logs/app-2025-01-19.log"
+ * 
+ * const hourlyPath = resolvePath("logs/<year>/<month>/app-<day>-<hour>.log", new Date('2025-01-19T14:30:00Z'));
+ * // Returns: "logs/2025/01/app-19-14.log"
+ * ```
+ */
 export function resolvePath(
   pathTemplate: string,
   date: Date,
