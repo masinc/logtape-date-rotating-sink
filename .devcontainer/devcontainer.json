@@ -1,0 +1,33 @@
+{
+  "name": "deno-development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "remoteUser": "vscode",
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW"
+  ],
+  "mounts": [
+    "source=mise-data-${devcontainerId},target=/home/vscode/.local/share/mise,type=volume",
+    "source=nix-store-${devcontainerId},target=/nix/store,type=volume",
+    "source=nix-profile-${devcontainerId},target=/home/vscode/.nix-profile,type=volume",
+    "source=home-manager-config-${devcontainerId},target=/home/vscode/.config/home-manager,type=volume"
+  ],
+  "remoteEnv": {
+    "MISE_DATA_DIR": "/home/vscode/.local/share/mise",
+    "PATH": "/home/vscode/.nix-profile/bin:/home/vscode/.local/share/mise/shims:${containerEnv:PATH}",
+    "SHELL": "/bin/fish"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "denoland.vscode-deno",
+        "eamodio.gitlens",
+        "Anthropic.claude-code"
+      ]
+    }
+  },
+  "postCreateCommand": "/usr/local/scripts/shell-post-create-vscode.sh"
+}
