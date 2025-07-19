@@ -1,6 +1,6 @@
 {
   "name": "@masinc/logtape-date-rotating-sink",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "exports": "./mod.ts",
   "license": "MIT",
   "tasks": {
