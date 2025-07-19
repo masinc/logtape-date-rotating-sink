@@ -91,6 +91,11 @@ class DateRotatingFileSinkImpl {
       this.flush().catch(() => {
         // Handle flush error silently for now
       });
+    } else if (this.options.flushInterval === 0) {
+      // If flushInterval is 0, flush immediately
+      this.flush().catch(() => {
+        // Handle flush error silently for now
+      });
     }
   };
 
