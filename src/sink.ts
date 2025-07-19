@@ -30,6 +30,26 @@ class DateRotatingFileSinkImpl {
     this.pathTemplate = pathTemplate;
     this.options = { ...DEFAULT_OPTIONS, ...options };
     this.init();
+    this.setupExitHandlers();
+  }
+
+  private setupExitHandlers(): void {
+    try {
+      if ("process" in globalThis && !("Deno" in globalThis)) {
+        // Node.js/Bun environment - matches LogTape's detection logic
+        // deno-lint-ignore no-explicit-any
+        const proc = (globalThis as any).process;
+        if (proc?.on) {
+          proc.on("exit", () => this.flushSync());
+        }
+      } else {
+        // Deno/browser environment
+        // @ts-ignore: It's fine to addEventListener() on the browser/Deno
+        globalThis.addEventListener("unload", () => this.flushSync());
+      }
+    } catch (_error) {
+      // Fallback: ignore if exit handlers can't be setup
+    }
   }
 
   private init(): void {
@@ -123,6 +143,54 @@ class DateRotatingFileSinkImpl {
     }
   }
 
+  private flushSync(): void {
+    if (this.buffer.length === 0) return;
+
+    const content = this.buffer;
+    this.buffer = "";
+
+    try {
+      // Use Deno's sync APIs if available, otherwise fall back to Node.js
+      const runtime = this.detectRuntime();
+      
+      // Ensure directory exists
+      const dirPath = this.currentFilePath.substring(
+        0,
+        this.currentFilePath.lastIndexOf("/"),
+      );
+      
+      if (runtime === 'deno') {
+        if (dirPath) {
+          Deno.mkdirSync(dirPath, { recursive: true });
+        }
+        Deno.writeTextFileSync(this.currentFilePath, content, { append: true });
+      } else {
+        // @ts-ignore: Node.js modules for other runtimes
+        const { mkdirSync, appendFileSync } = require("node:fs");
+        if (dirPath) {
+          mkdirSync(dirPath, { recursive: true });
+        }
+        appendFileSync(this.currentFilePath, content, "utf8");
+      }
+    } catch (_error) {
+      // Restore buffer on error
+      this.buffer = content + this.buffer;
+      // Silently ignore sync flush errors
+    }
+  }
+
+  private detectRuntime(): 'deno' | 'node' | 'bun' {
+    if (typeof Deno !== 'undefined') {
+      return 'deno';
+    }
+    // @ts-ignore: process is not available in Deno
+    // deno-lint-ignore no-process-global
+    if (typeof process !== 'undefined' && process.versions?.bun) {
+      return 'bun';
+    }
+    return 'node';
+  }
+
   [Symbol.dispose](): void {
     this.disposed = true;
 
@@ -132,11 +200,8 @@ class DateRotatingFileSinkImpl {
     }
 
     if (this.buffer.length > 0) {
-      // Synchronous flush attempt - this is a limitation
-      // In real implementation, we might want to use a different approach
-      this.flush().catch(() => {
-        // Ignore errors during disposal
-      });
+      // Use synchronous flush for disposal to ensure data is written
+      this.flushSync();
     }
   }
 }
