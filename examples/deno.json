@@ -1,0 +1,14 @@
+{
+  "name": "logtape-date-rotating-sink-examples",
+  "version": "0.1.0",
+  "tasks": {
+    "dev": "deno run --allow-read --allow-write basic-usage.ts",
+    "web-server": "deno run --allow-read --allow-write --allow-net web-server.ts",
+    "custom-formatter": "deno run --allow-read --allow-write custom-formatter.ts",
+    "multiple-sinks": "deno run --allow-read --allow-write multiple-sinks.ts"
+  },
+  "imports": {
+    "@logtape/logtape": "jsr:@logtape/logtape@^1.0.0",
+    "@logtape/date-rotating-file": "../mod.ts"
+  }
+}
