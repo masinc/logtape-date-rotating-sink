@@ -1,2 +1,5 @@
 export { getDateRotatingFileSink } from "./sink.ts";
-export type { DateRotatingFileSinkOptions, DateRotatingFileSink } from "./types.ts";
+export type {
+  DateRotatingFileSink,
+  DateRotatingFileSinkOptions,
+} from "./types.ts";

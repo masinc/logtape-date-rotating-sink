@@ -1,22 +1,28 @@
 import type { LogRecord } from "@logtape/logtape";
-import type { DateRotatingFileSinkOptions, DateRotatingFileSink } from "./types.ts";
+import type {
+  DateRotatingFileSink,
+  DateRotatingFileSinkOptions,
+} from "./types.ts";
 import { resolvePath } from "./date-formatter.ts";
 import { createFileWriter, type FileWriter } from "./runtime.ts";
 
 const DEFAULT_OPTIONS: Required<DateRotatingFileSinkOptions> = {
-  formatter: (record: LogRecord) => `${new Date(record.timestamp).toISOString()} [${record.level}] ${Array.isArray(record.message) ? record.message.join(' ') : record.message}\n`,
+  formatter: (record: LogRecord) =>
+    `${new Date(record.timestamp).toISOString()} [${record.level}] ${
+      Array.isArray(record.message) ? record.message.join(" ") : record.message
+    }\n`,
   bufferSize: 8192,
   flushInterval: 5000,
   nonBlocking: false,
-  timezone: '',
+  timezone: "",
 };
 
 class DateRotatingFileSinkImpl {
   private pathTemplate: string;
   private options: Required<DateRotatingFileSinkOptions>;
   private fileWriter: FileWriter | null = null;
-  private buffer = '';
-  private currentFilePath = '';
+  private buffer = "";
+  private currentFilePath = "";
   private flushTimer: number | null = null;
   private disposed = false;
   private initPromise: Promise<void>;
@@ -29,7 +35,7 @@ class DateRotatingFileSinkImpl {
 
   private async init(): Promise<void> {
     this.fileWriter = await createFileWriter();
-    
+
     if (this.options.flushInterval > 0) {
       this.flushTimer = setInterval(() => {
         if (this.buffer.length > 0) {
@@ -49,7 +55,7 @@ class DateRotatingFileSinkImpl {
       const newFilePath = resolvePath(
         this.pathTemplate,
         new Date(record.timestamp),
-        this.options.timezone || undefined
+        this.options.timezone || undefined,
       );
 
       // Set initial file path if not set
@@ -84,11 +90,14 @@ class DateRotatingFileSinkImpl {
     if (!this.fileWriter || this.buffer.length === 0) return;
 
     const content = this.buffer;
-    this.buffer = '';
+    this.buffer = "";
 
     try {
       // Ensure directory exists
-      const dirPath = this.currentFilePath.substring(0, this.currentFilePath.lastIndexOf('/'));
+      const dirPath = this.currentFilePath.substring(
+        0,
+        this.currentFilePath.lastIndexOf("/"),
+      );
       if (dirPath) {
         await this.fileWriter.ensureDir(dirPath);
       }
@@ -121,13 +130,13 @@ class DateRotatingFileSinkImpl {
 
 export function getDateRotatingFileSink(
   pathTemplate: string,
-  options?: DateRotatingFileSinkOptions
+  options?: DateRotatingFileSinkOptions,
 ): DateRotatingFileSink {
   const impl = new DateRotatingFileSinkImpl(pathTemplate, options);
   const sinkFunction = impl.emit.bind(impl) as DateRotatingFileSink;
-  
+
   // Add dispose method to the function
   (sinkFunction as any)[Symbol.dispose] = () => impl[Symbol.dispose]();
-  
+
   return sinkFunction;
 }
