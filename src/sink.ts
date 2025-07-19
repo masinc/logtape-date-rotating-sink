@@ -4,7 +4,8 @@ import type {
   DateRotatingFileSinkOptions,
 } from "./types.ts";
 import { resolvePath } from "./date-formatter.ts";
-import { createFileWriter, type FileWriter } from "./runtime.ts";
+// @ts-ignore: Node.js modules are available in all supported runtimes
+import * as fs from "node:fs/promises";
 
 const DEFAULT_OPTIONS: Required<DateRotatingFileSinkOptions> = {
   formatter: (record: LogRecord) =>
@@ -20,21 +21,18 @@ const DEFAULT_OPTIONS: Required<DateRotatingFileSinkOptions> = {
 class DateRotatingFileSinkImpl {
   private pathTemplate: string;
   private options: Required<DateRotatingFileSinkOptions>;
-  private fileWriter: FileWriter | null = null;
   private buffer = "";
   private currentFilePath = "";
   private flushTimer: number | null = null;
   private disposed = false;
-  private initPromise: Promise<void>;
 
   constructor(pathTemplate: string, options: DateRotatingFileSinkOptions = {}) {
     this.pathTemplate = pathTemplate;
     this.options = { ...DEFAULT_OPTIONS, ...options };
-    this.initPromise = this.init();
+    this.init();
   }
 
-  private async init(): Promise<void> {
-    this.fileWriter = await createFileWriter();
+  private init(): void {
 
     if (this.options.flushInterval > 0) {
       this.flushTimer = setInterval(() => {
@@ -50,44 +48,39 @@ class DateRotatingFileSinkImpl {
   emit = (record: LogRecord): void => {
     if (this.disposed) return;
 
-    // Ensure initialization is complete before processing
-    this.initPromise.then(async () => {
-      const newFilePath = resolvePath(
-        this.pathTemplate,
-        new Date(record.timestamp),
-        this.options.timezone || undefined,
-      );
+    const newFilePath = resolvePath(
+      this.pathTemplate,
+      new Date(record.timestamp),
+      this.options.timezone || undefined,
+    );
 
-      // Set initial file path if not set
-      if (!this.currentFilePath) {
-        this.currentFilePath = newFilePath;
-      }
+    // Set initial file path if not set
+    if (!this.currentFilePath) {
+      this.currentFilePath = newFilePath;
+    }
 
-      // Rotation needed
-      if (newFilePath !== this.currentFilePath) {
-        if (this.buffer.length > 0) {
-          await this.flush().catch(() => {
-            // Handle flush error silently for now
-          });
-        }
-        this.currentFilePath = newFilePath;
-      }
-
-      const formattedRecord = this.options.formatter(record);
-      this.buffer += formattedRecord;
-
-      if (this.buffer.length >= this.options.bufferSize) {
-        await this.flush().catch(() => {
+    // Rotation needed
+    if (newFilePath !== this.currentFilePath) {
+      if (this.buffer.length > 0) {
+        this.flush().catch(() => {
           // Handle flush error silently for now
         });
       }
-    }).catch(() => {
-      // Handle initialization error silently
-    });
+      this.currentFilePath = newFilePath;
+    }
+
+    const formattedRecord = this.options.formatter(record);
+    this.buffer += formattedRecord;
+
+    if (this.buffer.length >= this.options.bufferSize) {
+      this.flush().catch(() => {
+        // Handle flush error silently for now
+      });
+    }
   };
 
   private async flush(): Promise<void> {
-    if (!this.fileWriter || this.buffer.length === 0) return;
+    if (this.buffer.length === 0) return;
 
     const content = this.buffer;
     this.buffer = "";
@@ -99,10 +92,10 @@ class DateRotatingFileSinkImpl {
         this.currentFilePath.lastIndexOf("/"),
       );
       if (dirPath) {
-        await this.fileWriter.ensureDir(dirPath);
+        await fs.mkdir(dirPath, { recursive: true });
       }
 
-      await this.fileWriter.append(this.currentFilePath, content);
+      await fs.appendFile(this.currentFilePath, content, "utf8");
     } catch (error) {
       // Restore buffer on error
       this.buffer = content + this.buffer;
@@ -136,7 +129,7 @@ export function getDateRotatingFileSink(
   const sinkFunction = impl.emit.bind(impl) as DateRotatingFileSink;
 
   // Add dispose method to the function
-  (sinkFunction as any)[Symbol.dispose] = () => impl[Symbol.dispose]();
+  (sinkFunction as DateRotatingFileSink)[Symbol.dispose] = () => impl[Symbol.dispose]();
 
   return sinkFunction;
 }
